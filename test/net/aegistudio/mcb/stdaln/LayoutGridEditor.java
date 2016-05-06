@@ -133,7 +133,6 @@ public class LayoutGridEditor extends AwtGridComponent {
 		JFrame frame = new JFrame("Layout");
 		frame.setLayout(null);
 		frame.setResizable(false);
-		frame.setLocationRelativeTo(null);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		JMenuBar menubar = new JMenuBar();
@@ -229,6 +228,7 @@ public class LayoutGridEditor extends AwtGridComponent {
 		//resetGridComponent(frame, new LayoutGridEditor(new LayoutGrid()));
 		resetGridComponent(frame, new LayoutGridEditor(new SpectatedLayoutGrid()));
 		
+		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
 	}
 }
