@@ -19,23 +19,34 @@ import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.material.PistonBaseMaterial;
 import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.metadata.MetadataValue;
 
 import net.aegistudio.mcb.Facing;
 import net.aegistudio.mcb.MapCircuitBoard;
-import net.aegistudio.mcb.board.CircuitBoardCanvas;
+import net.aegistudio.mcb.TickableBoard;
 import net.aegistudio.mcb.board.PropagatePolicy;
 import net.aegistudio.mcb.board.Propagator;
+import net.aegistudio.mcb.mcinject.tileentity.TileEntity;
+import net.aegistudio.mcb.mcinject.tileentity.TileEntityCommand;
+import net.aegistudio.mcb.mcinject.world.BlockPosition;
+import net.aegistudio.mcb.mcinject.world.World;
+import net.aegistudio.mcb.reflect.clazz.SamePackageClass;
+import net.aegistudio.mcb.reflect.method.AbstractExecutor;
+import net.aegistudio.mcb.reflect.method.MatchedExecutor;
 
 public class BlockPropagatePolicy implements PropagatePolicy {
 	public final MapCircuitBoard plugin;
+	public AbstractExecutor setComparatorLevel;
 	
 	public BlockPropagatePolicy(MapCircuitBoard circuitBoard) {
 		circuitBoard.getServer().getPluginManager()
 			.registerEvents(new SimplePowerListener(Material.REDSTONE_TORCH_OFF, i -> i != 0, circuitBoard), circuitBoard);
 		circuitBoard.getServer().getPluginManager()
 			.registerEvents(new SimplePowerListener(Material.DIODE_BLOCK_ON, i -> i == 0, circuitBoard), circuitBoard);
-		//circuitBoard.getServer().getPluginManager()
-		//	.registerEvents(new SimplePowerListener(Material.REDSTONE_COMPARATOR_ON, i -> i == 0, circuitBoard), circuitBoard);
+		circuitBoard.getServer().getPluginManager()
+			.registerEvents(new SimplePowerListener(Material.REDSTONE_COMPARATOR_ON, i -> i == 0, circuitBoard), circuitBoard);
+		circuitBoard.getServer().getPluginManager()
+			.registerEvents(new SimplePowerListener(Material.REDSTONE_COMPARATOR_OFF, i -> i == 0, circuitBoard), circuitBoard);
 		
 		circuitBoard.getServer().getPluginManager()
 			.registerEvents(new LampPowerListener(circuitBoard), circuitBoard);
@@ -45,28 +56,36 @@ public class BlockPropagatePolicy implements PropagatePolicy {
 			.registerEvents(new SimplePowerListener(Material.REDSTONE_WIRE, i -> true, circuitBoard), circuitBoard);
 		
 		this.plugin = circuitBoard;
+		
+		try {
+			SamePackageClass comparatorClazz = new SamePackageClass(plugin.server.getMinecraftServerClass(), "TileEntityComparator");
+			this.setComparatorLevel = new MatchedExecutor(comparatorClazz.method(), int.class);
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	@Override
-	public boolean in(Location location, Facing side, CircuitBoardCanvas canvas, ItemFrame frame) {
+	public boolean in(Location location, Facing side, TickableBoard canvas, ItemFrame frame) {
 		Block block = location.getBlock();
 		if(block.getType() == Material.AIR) return false;
 		
 		int power = block.getBlockPower();
 		Propagator propagate = new Propagator();
 		propagate.setVoltage(2 * power);
-		propagate.propagateVoltage(canvas.grid, side);
+		propagate.propagateVoltage(canvas.getGrid(), side);
 		return true;
 	}
 
 	@Override
-	public boolean out(Location location, Facing face, CircuitBoardCanvas canvas, ItemFrame frame) {
+	public boolean out(Location location, Facing face, TickableBoard canvas, ItemFrame frame) {
 		Block block = location.getBlock();
 		if(block.getType() == Material.AIR) return false;
 		
 		Propagator propagate = new Propagator();
 		propagate.setVoltage(-1);
-		propagate.retrieveVoltage(canvas.grid, face);
+		propagate.retrieveVoltage(canvas.getGrid(), face);
 		if(propagate.getVoltage() < 0) return true;
 		
 		int newVoltage = propagate.getVoltage() / 2;
@@ -83,6 +102,7 @@ public class BlockPropagatePolicy implements PropagatePolicy {
 		
 		Function<Integer, Material> redstoneOnOff = null;
 		Function<Integer, Integer> shouldPower = null;		// Used only in comparator, repeater and torch.
+		Runnable cleanUpWork = null;
 		
 		switch(block.getType()) {
 			case REDSTONE_WIRE:
@@ -92,12 +112,11 @@ public class BlockPropagatePolicy implements PropagatePolicy {
 			
 			case REDSTONE_COMPARATOR_OFF:
 			case REDSTONE_COMPARATOR_ON:
-				/*
-				BlockState comparatorState = block.getState();
-				Comparator comparator = (Comparator) comparatorState.getData();
-				System.out.println(comparator.getFacing());
-				BlockFace face = block.getFace(from.getBlock());
-				*/
+				// Seem fails to work.
+				World world = new World(plugin.server, block.getWorld());
+				TileEntity<?> tileEntity = world.getTileEntity(new BlockPosition(plugin.server, block.getLocation()), null);
+				setComparatorLevel.invoke(tileEntity.thiz, power);
+				block.setMetadata(REDSTONE_STATE, new FixedMetadataValue(plugin, power));
 			break;
 					
 			case DIODE_BLOCK_OFF:
@@ -108,7 +127,11 @@ public class BlockPropagatePolicy implements PropagatePolicy {
 							Material.DIODE_BLOCK_OFF;
 				if(shouldPower == null)
 					shouldPower = p -> p > 0? 15 : 0;
-					
+				Location location = block.getLocation();
+				BlockFace diodeFace = BlockFace.values()[location.getBlock().getData()];
+				Block wireToNotify = location.getBlock().getRelative(diodeFace);
+				cleanUpWork = () -> wireToNotify.getState().update(true, true);
+				
 			case REDSTONE_TORCH_ON:
 			case REDSTONE_TORCH_OFF:
 				if(redstoneOnOff == null)
@@ -137,25 +160,41 @@ public class BlockPropagatePolicy implements PropagatePolicy {
 				block.setData((byte) ((data & 0x03) | (power != 0? 4 : 0)));
 			break;
 			
+			case COMMAND:
+				int previousPower = 0;
+				for(MetadataValue value : block.getMetadata(REDSTONE_STATE))
+					if(value.getOwningPlugin() == plugin)
+						previousPower = value.asInt();
+				
+				if(previousPower == 0 && power > 0) {
+					final World commandWorld = new World(this.plugin.server, block.getWorld());
+					final TileEntityCommand commandTileEntity = (TileEntityCommand) commandWorld.getTileEntity(
+							new BlockPosition(this.plugin.server, block.getLocation()),
+							this.plugin.server.getTileEntityManager().tileEntityCommand.getClazz());
+					plugin.getServer().getScheduler().runTask(plugin, () ->
+						commandTileEntity.getCommandBlock().execute(commandWorld));
+				}
+				
+				block.setMetadata(REDSTONE_STATE, new FixedMetadataValue(plugin, power));
+			break;
+			
 			case DROPPER:
 				if(redstoneInventory == null)
 					redstoneInventory = state -> ((Dropper)state).drop();
 			case DISPENSER:
 				if(redstoneInventory == null)
 					redstoneInventory = state -> ((Dispenser)state).dispense();
-			
 				try {
-				
-				final Consumer<BlockState> capturedRedstoneInventory = redstoneInventory;
-				final BlockState capturedBlockState = block.getState();
-				if(block.getData() < 8 && power > 0)
-					plugin.getServer().getScheduler().runTask(plugin, 
-							() -> capturedRedstoneInventory.accept(capturedBlockState));
+					final Consumer<BlockState> capturedRedstoneInventory = redstoneInventory;
+					final BlockState capturedBlockState = block.getState();
+					if(block.getData() < 8 && power > 0)
+						plugin.getServer().getScheduler().runTask(plugin, 
+								() -> capturedRedstoneInventory.accept(capturedBlockState));
 				}
 				catch(Throwable e) {
 					e.printStackTrace();
 				}
-				//block.setData((byte)((power > 0? 8 : 0) | (0x07 & block.getData())));
+				block.setData((byte)((power > 0? 8 : 0) | (0x07 & block.getData())));
 			break;
 			
 			case REDSTONE_LAMP_ON:
@@ -223,5 +262,9 @@ public class BlockPropagatePolicy implements PropagatePolicy {
 				offset.accept(BlockFace.SOUTH, block.getLocation());
 			}
 		}
+		
+		if(cleanUpWork != null) 
+			cleanUpWork.run();
+			//plugin.getServer().getScheduler().runTask(plugin, cleanUpWork);
 	}
 }

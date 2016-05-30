@@ -9,7 +9,6 @@ import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.function.Consumer;
 
 import org.bukkit.ChatColor;
@@ -24,13 +23,17 @@ import org.mcstats.Metrics;
 
 import net.aegistudio.mcb.board.CircuitBoardCanvas;
 import net.aegistudio.mcb.board.CircuitBoardItem;
+import net.aegistudio.mcb.board.IntegratedCanvas;
 import net.aegistudio.mcb.board.PropagateManager;
 import net.aegistudio.mcb.clock.Asynchronous;
 import net.aegistudio.mcb.clock.Clocking;
 import net.aegistudio.mcb.clock.Synchronous;
+import net.aegistudio.mcb.layout.CommandBlockPlacer;
 import net.aegistudio.mcb.layout.ComponentPlaceListener;
 import net.aegistudio.mcb.layout.ComponentPlacer;
 import net.aegistudio.mcb.layout.SchemeCanvas;
+import net.aegistudio.mcb.mcinject.CraftMinecraftServer;
+import net.aegistudio.mcb.mcinject.MinecraftServer;
 import net.aegistudio.mcb.unit.Button;
 import net.aegistudio.mcb.unit.CommandBlock;
 import net.aegistudio.mcb.unit.Comparator;
@@ -65,42 +68,67 @@ public class MapCircuitBoard extends JavaPlugin {
 	public PropagateManager propagate;
 	public BukkitBlockEditor editor;
 	
-	public static final TreeSet<String> supportedLocale = new TreeSet<String>(); {
-		supportedLocale.add("en_US");
-		supportedLocale.add("zh_CN");
-	}
-	Properties locale = new Properties();
+	public static final String SOURCE_RAW_URL = "https://raw.githubusercontent.com/aegistudio/MapCircuitBoard/master/";
+	public Properties locale = new Properties();
+	public MinecraftServer server;
 	
 	public void onEnable() {
 		try {
-			Properties defaultLocale = new Properties();
-			String languageName = Locale.getDefault().toString();
-			if(!supportedLocale.contains(languageName))
-				languageName = "en_US";
-			defaultLocale.load(getClass().getResourceAsStream(languageName + ".properties"));
-			
-			File locale = new File(this.getDataFolder(), "locale.properties");
-			if(locale.exists())
-				this.locale.load(new FileInputStream(locale));
-			
-			int presize = this.locale.keySet().size();
-			defaultLocale.forEach((k, v) -> MapCircuitBoard.this.locale.putIfAbsent(k, v));
-			int postsize = this.locale.keySet().size();
-			
-			if(postsize > presize)
-				this.locale.store(new FileOutputStream(locale), null);
-			
-			this.locale.replaceAll((k, v) -> {
-				String current = (String) v;
-				for(ChatColor color : ChatColor.values()) 
-					current = current.replace("${" + color.name() + "}", color.toString());
-				return current;
-			});
+			this.server = new CraftMinecraftServer(getServer());
 		}
 		catch(Exception e) {
 			e.printStackTrace();
 			this.setEnabled(false);
 		}
+		new Thread(() -> {
+			try {
+				this.locale = new Properties();
+				final Properties defaultLocale = new Properties();
+				
+				Thread fetchLocale = new Thread(() -> {
+					try {
+						URL localeMapUrl = new URL(SOURCE_RAW_URL + "locale/map.properties");
+				    	Properties localeMap = new Properties();
+				    	localeMap.load(localeMapUrl.openConnection().getInputStream());
+				    	String mappedLanguage = localeMap.getProperty(Locale.getDefault().toString());
+				    	if(mappedLanguage == null) mappedLanguage = localeMap.getProperty("en_US");
+				    	
+				    	URL mappedUrl = new URL(SOURCE_RAW_URL + "locale/" + mappedLanguage);
+						defaultLocale.load(mappedUrl.openConnection().getInputStream());
+					}
+					catch(Exception e) {
+						e.printStackTrace();
+					}
+				});
+				
+				fetchLocale.start();
+				File locale = new File(this.getDataFolder(), "locale.properties");
+				if(locale.exists())
+					this.locale.load(new FileInputStream(locale));
+				
+				fetchLocale.join();
+				
+				int presize = this.locale.keySet().size();
+				defaultLocale.forEach((k, v) -> MapCircuitBoard.this.locale.putIfAbsent(k, v));
+				int postsize = this.locale.keySet().size();
+				
+				if(postsize > presize)
+					this.locale.store(new FileOutputStream(locale), null);
+				
+				this.locale.replaceAll((k, v) -> {
+					String current = (String) v;
+					for(ChatColor color : ChatColor.values()) 
+						current = current.replace("${" + color.name() + "}", color.toString());
+					return current;
+				});
+				
+				sendConsole("Successfully fetched locale file!");
+			}
+			catch(Exception e) {
+				sendConsole("Failed in fetching locale file.");
+				e.printStackTrace();
+			}
+		}).start();
 		
 		factory = new ComponentFactory(editor = new BukkitBlockEditor(this));
 		placeListener.add(new ComponentPlacer(Material.AIR, factory.get(factory.id(Air.class))));
@@ -113,7 +141,7 @@ public class MapCircuitBoard extends JavaPlugin {
 		factory.all(BiInsulatedWire.class, insulated -> placeListener.add(new ComponentPlacer(Material.POWERED_RAIL, insulated)));
 		factory.all(Repeater.class, repeater -> placeListener.add(new ComponentPlacer(Material.DIODE, repeater)));
 		factory.all(Comparator.class, comparator -> placeListener.add(new ComponentPlacer(Material.REDSTONE_COMPARATOR, comparator)));
-		factory.all(CommandBlock.class, command -> placeListener.add(new ComponentPlacer(Material.COMMAND, command)));
+		factory.all(CommandBlock.class, command -> placeListener.add(new CommandBlockPlacer(this, Material.COMMAND, command)));
 		
 		propagate = new PropagateManager(this);
 		
@@ -123,8 +151,8 @@ public class MapCircuitBoard extends JavaPlugin {
 			
 			schemes = new TreeMap<Integer, PluginCanvasRegistry<SchemeCanvas>>();
 			canvasService.register(this, "scheme", (context) -> new SchemeCanvas(this, context));
-			
 			canvasService.register(this, "redstone", (context) -> new CircuitBoardCanvas(this, context));
+			canvasService.register(this, "integrated", (context) -> new IntegratedCanvas(this, context));
 		}
 		catch(Throwable t) {
 			t.printStackTrace();
@@ -172,6 +200,22 @@ public class MapCircuitBoard extends JavaPlugin {
 				public @Override String paramList() {	return "";	}
 			});
 			
+			commandService.registerCreate(this, "create/integrated", "integrated", 
+					new CanvasCommandHandle<MapCircuitBoard, IntegratedCanvas>() {
+
+				public @Override String description() {	return locale.getProperty("integrated.description");	}
+
+				public @Override boolean handle(MapCircuitBoard arg0, CommandSender arg1, 
+						String[] arg2, IntegratedCanvas arg3) {
+					if(arg1.hasPermission("mcb.integrated"))
+						return true;
+					arg1.sendMessage(locale.getProperty("integrated.nopermission"));
+					return false;
+				}
+
+				public @Override String paramList() {	return "";	}
+			});
+			
 			editor.registerCommands(commandService);
 		}
 		catch(Throwable t) {
@@ -199,7 +243,7 @@ public class MapCircuitBoard extends JavaPlugin {
 		new Thread(() -> {
 	    	String currentVersion = this.getDescription().getVersion();
 		    try {
-		    	URL masterUrl = new URL("https://raw.githubusercontent.com/aegistudio/MapCircuitBoard/master/build.properties");
+		    	URL masterUrl = new URL(SOURCE_RAW_URL + "build.properties");
 		    	Properties masterBuild = new Properties();
 		    	masterBuild.load(masterUrl.openConnection().getInputStream());
 		    	String masterVersion = masterBuild.getProperty("version");
@@ -267,7 +311,7 @@ public class MapCircuitBoard extends JavaPlugin {
 	public Clocking clocking;
 	
 	public void clock() {
-		forCircuitBoards(redstone -> {if(redstone.frame == null) redstone.whereami();});
+		forCircuitBoards(redstone -> {if(redstone.getFrame() == null) redstone.whereami();});
 		for(int i = 0; i < internalTick; i ++) {
 			forCircuitBoards(redstone -> redstone.propagateIn());
 			forCircuitBoards(redstone -> redstone.clockTick());
@@ -275,28 +319,33 @@ public class MapCircuitBoard extends JavaPlugin {
 		}
 	}
 	
-	public void forCircuitBoards(Consumer<CircuitBoardCanvas> todo) {
+	public void forCircuitBoards(Consumer<TickableBoard> todo) {
 		Deque<WorkingThread> workingThreadQueue = new LinkedList<WorkingThread>();
-		for(PluginCanvasRegistry<CircuitBoardCanvas> redstone : 
-			canvasService.getPluginCanvases(this, "redstone", CircuitBoardCanvas.class)) {
-				WorkingThread thread = new WorkingThread(todo, redstone.canvas());
-				workingThreadQueue.addFirst(thread);
-				thread.start();
-		}
+		Consumer<TickableBoard> boardConsumer = (board) -> {
+			WorkingThread thread = new WorkingThread(todo, board);
+			workingThreadQueue.addFirst(thread);
+			thread.start();
+		};
+		
+		canvasService.getPluginCanvases(this, "redstone", CircuitBoardCanvas.class)
+			.forEach(registry -> boardConsumer.accept(registry.canvas()));
+		canvasService.getPluginCanvases(this, "integrated", IntegratedCanvas.class)
+			.forEach(registry -> boardConsumer.accept(registry.canvas()));
+			
 		for(WorkingThread thread : workingThreadQueue)
 			try { thread.join(); } catch(Exception e) {	e.printStackTrace(); }
 	}
 	
 	class WorkingThread extends Thread{
-		private final Consumer<CircuitBoardCanvas> consumer;
-		private final CircuitBoardCanvas canvas;
-		public WorkingThread(Consumer<CircuitBoardCanvas> consumer, CircuitBoardCanvas canvas) {
+		private final Consumer<TickableBoard> consumer;
+		private final TickableBoard canvas;
+		public WorkingThread(Consumer<TickableBoard> consumer, TickableBoard canvas) {
 			this.consumer = consumer;
 			this.canvas = canvas;
 		}
 		
-		public void run() {
-			try {	this.consumer.accept(canvas);	} catch(Throwable t) { }
+		public void run() {	
+			try {	this.consumer.accept(canvas);	} catch(Throwable t) {			}
 		}
 	}
 }
