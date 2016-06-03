@@ -9,7 +9,6 @@ import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.function.Consumer;
 
 import org.bukkit.ChatColor;
@@ -65,42 +64,59 @@ public class MapCircuitBoard extends JavaPlugin {
 	public PropagateManager propagate;
 	public BukkitBlockEditor editor;
 	
-	public static final TreeSet<String> supportedLocale = new TreeSet<String>(); {
-		supportedLocale.add("en_US");
-		supportedLocale.add("zh_CN");
-	}
+	public static final String SOURCE_RAW_URL = "https://raw.githubusercontent.com/aegistudio/MapCircuitBoard/master/";
 	Properties locale = new Properties();
 	
 	public void onEnable() {
-		try {
-			Properties defaultLocale = new Properties();
-			String languageName = Locale.getDefault().toString();
-			if(!supportedLocale.contains(languageName))
-				languageName = "en_US";
-			defaultLocale.load(getClass().getResourceAsStream(languageName + ".properties"));
-			
-			File locale = new File(this.getDataFolder(), "locale.properties");
-			if(locale.exists())
-				this.locale.load(new FileInputStream(locale));
-			
-			int presize = this.locale.keySet().size();
-			defaultLocale.forEach((k, v) -> MapCircuitBoard.this.locale.putIfAbsent(k, v));
-			int postsize = this.locale.keySet().size();
-			
-			if(postsize > presize)
-				this.locale.store(new FileOutputStream(locale), null);
-			
-			this.locale.replaceAll((k, v) -> {
-				String current = (String) v;
-				for(ChatColor color : ChatColor.values()) 
-					current = current.replace("${" + color.name() + "}", color.toString());
-				return current;
-			});
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-			this.setEnabled(false);
-		}
+		new Thread(() -> {
+			try {
+				this.locale = new Properties();
+				final Properties defaultLocale = new Properties();
+				
+				Thread fetchLocale = new Thread(() -> {
+					try {
+						URL localeMapUrl = new URL(SOURCE_RAW_URL + "locale/map.properties");
+				    	Properties localeMap = new Properties();
+				    	localeMap.load(localeMapUrl.openConnection().getInputStream());
+				    	String mappedLanguage = localeMap.getProperty(Locale.getDefault().toString());
+				    	if(mappedLanguage == null) mappedLanguage = localeMap.getProperty("en_US");
+				    	
+				    	URL mappedUrl = new URL(SOURCE_RAW_URL + "locale/" + mappedLanguage);
+						defaultLocale.load(mappedUrl.openConnection().getInputStream());
+					}
+					catch(Exception e) {
+						e.printStackTrace();
+					}
+				});
+				
+				fetchLocale.start();
+				File locale = new File(this.getDataFolder(), "locale.properties");
+				if(locale.exists())
+					this.locale.load(new FileInputStream(locale));
+				
+				fetchLocale.join();
+				
+				int presize = this.locale.keySet().size();
+				defaultLocale.forEach((k, v) -> MapCircuitBoard.this.locale.putIfAbsent(k, v));
+				int postsize = this.locale.keySet().size();
+				
+				if(postsize > presize)
+					this.locale.store(new FileOutputStream(locale), null);
+				
+				this.locale.replaceAll((k, v) -> {
+					String current = (String) v;
+					for(ChatColor color : ChatColor.values()) 
+						current = current.replace("${" + color.name() + "}", color.toString());
+					return current;
+				});
+				
+				sendConsole("Successfully fetched locale file!");
+			}
+			catch(Exception e) {
+				sendConsole("Failed in fetching locale file.");
+				e.printStackTrace();
+			}
+		}).start();
 		
 		factory = new ComponentFactory(editor = new BukkitBlockEditor(this));
 		placeListener.add(new ComponentPlacer(Material.AIR, factory.get(factory.id(Air.class))));
@@ -199,7 +215,7 @@ public class MapCircuitBoard extends JavaPlugin {
 		new Thread(() -> {
 	    	String currentVersion = this.getDescription().getVersion();
 		    try {
-		    	URL masterUrl = new URL("https://raw.githubusercontent.com/aegistudio/MapCircuitBoard/master/build.properties");
+		    	URL masterUrl = new URL(SOURCE_RAW_URL + "build.properties");
 		    	Properties masterBuild = new Properties();
 		    	masterBuild.load(masterUrl.openConnection().getInputStream());
 		    	String masterVersion = masterBuild.getProperty("version");
