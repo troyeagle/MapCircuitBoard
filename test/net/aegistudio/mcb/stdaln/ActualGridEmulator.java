@@ -107,7 +107,6 @@ public class ActualGridEmulator extends AwtGridComponent {
 		JFrame frame = new JFrame("Emulation");
 		frame.setLayout(null);
 		frame.setResizable(false);
-		frame.setLocationRelativeTo(null);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.addKeyListener(new KeyListener() {
 			@Override
@@ -283,6 +282,7 @@ public class ActualGridEmulator extends AwtGridComponent {
 		noEmulation.setHorizontalAlignment(JLabel.CENTER);
 		frame.add(noEmulation);
 		
+		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
 	}
 }
