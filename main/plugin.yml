@@ -1,6 +1,6 @@
 name: MapCircuitBoard
 main: net.aegistudio.mcb.MapCircuitBoard
-version: 1.4
+version: 1.6
 author: aegistudio
 softdepend: [MapPainting]
 permissions:
@@ -9,6 +9,9 @@ permissions:
     default: op
   mcb.circuit:
     description: Grants player to obtain or deploy a circuit board
+    default: op
+  mcb.integrated:
+    description: Grants player to obtain or deploy a integrated board
     default: op
   mcb.cmdblock:
     description: Grants player to edit or use command block.
