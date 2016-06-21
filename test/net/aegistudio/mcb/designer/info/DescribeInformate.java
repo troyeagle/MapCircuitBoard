@@ -11,11 +11,11 @@ import net.aegistudio.mcb.unit.CommandBlock;
  * @author aegistdio
  */
 
-public class McInformate extends DefaultInformate {
+public class DescribeInformate extends DefaultInformate {
 	public HashMap<Class<? extends Component>, String> description = new HashMap<>();
 	public void describe(Class<? extends Component> clazz, String descriptionLine) {
 		if(!description.containsKey(clazz)) {
-			super.register(clazz, (component, data) -> description.get(clazz));
+			super.register(clazz, (cell, component, data) -> description.get(clazz));
 			description.put(clazz, descriptionLine);
 		}
 		else description.put(clazz, description.get(clazz) + "\n" + descriptionLine);
@@ -32,6 +32,6 @@ public class McInformate extends DefaultInformate {
 	}
 	
 	public static void main(String[] arguments) {
-		System.out.println(new McInformate().describe(null, Button.INSTANCE, null));
+		System.out.println(new DescribeInformate().describe(null, Button.INSTANCE, null));
 	}
 }
