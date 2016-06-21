@@ -13,6 +13,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.HashMap;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFileChooser;
@@ -132,7 +133,7 @@ public class McbDesigner extends JFrame implements Informate {
 		file.add(newFile);
 		file.addSeparator();
 		
-		JButton newButton = new JButton("New");
+		JButton newButton = new JButton(new ImageIcon("assets/new.png"));
 		newButton.setToolTipText("New");
 		newButton.addActionListener(a -> newGridComponent());
 		newButton.setPreferredSize(TOOL_BAR_SIZE);
@@ -144,7 +145,7 @@ public class McbDesigner extends JFrame implements Informate {
 		openFile.setAccelerator(KeyStroke.getKeyStroke("ctrl O"));
 		file.add(openFile);
 		
-		JButton openButton = new JButton("Open");
+		JButton openButton = new JButton(new ImageIcon("assets/open.png"));
 		openButton.setToolTipText("Open");
 		openButton.addActionListener(a -> openGridComponent());
 		openButton.setPreferredSize(TOOL_BAR_SIZE);
@@ -156,7 +157,7 @@ public class McbDesigner extends JFrame implements Informate {
 		saveFile.setAccelerator(KeyStroke.getKeyStroke("ctrl S"));
 		file.add(saveFile);
 		
-		JButton saveButton = new JButton("Save");
+		JButton saveButton = new JButton(new ImageIcon("assets/save.png"));
 		saveButton.setToolTipText("Save");
 		saveButton.addActionListener(a -> saveGridComponent());
 		saveButton.setPreferredSize(TOOL_BAR_SIZE);
@@ -174,7 +175,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuUndo.setAccelerator(KeyStroke.getKeyStroke("ctrl Z"));
 		edit.add(menuUndo);
 		
-		toolUndo = new JButton("Undo") {
+		toolUndo = new JButton(new ImageIcon("assets/undo.png")) {
 			private static final long serialVersionUID = 1L;
 
 			public void setEnabled(boolean enabled) {
@@ -193,7 +194,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuRedo.setAccelerator(KeyStroke.getKeyStroke("ctrl Y"));
 		edit.add(menuRedo);
 		
-		toolRedo = new JButton("Redo"){
+		toolRedo = new JButton(new ImageIcon("assets/redo.png")){
 			private static final long serialVersionUID = 1L;
 
 			public void setEnabled(boolean enabled) {
@@ -254,7 +255,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuDesign.setSelected(true);
 		simulate.add(menuDesign);
 		
-		toolDesign = new JToggleButton("Design");
+		toolDesign = new JToggleButton(new ImageIcon("assets/design.png"));
 		toolDesign.setToolTipText("Design");
 		toolDesign.addActionListener(a -> endSimulate());
 		toolDesign.setPreferredSize(TOOL_BAR_SIZE);
@@ -285,7 +286,7 @@ public class McbDesigner extends JFrame implements Informate {
 		toolContinous.setSelected(true);
 		toolbar.add(toolContinous);
 		
-		toolStep = new JButton("Step");
+		toolStep = new JButton(new ImageIcon("assets/step.png"));
 		toolStep.setToolTipText("Step");
 		toolStep.addActionListener(a -> step());
 		toolStep.setSelected(true);

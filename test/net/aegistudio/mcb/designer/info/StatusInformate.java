@@ -79,6 +79,9 @@ public class StatusInformate extends DefaultInformate {
 										+ "\nSubtractive: " + (get(b, boolean.class, "subtractive")? "Yes" : "No"));
 		register(BiInsulatedWire.class, (a, b, c) -> "Input-Sides: " + get(b, Facing.class, "sidea")
 										+ ", " + get(b, Facing.class, "sideb"));
+		register(MonitorPin.class, (a, b, c) -> "Pin-Type: Output");
+		register(OriginatorPin.class, (a, b, c) -> "Pin-Type: Input");
+		register(CommandBlock.class, (a, b, c) -> "Command: " + ((CommandBlockData)c).command);
 	}
 	
 	

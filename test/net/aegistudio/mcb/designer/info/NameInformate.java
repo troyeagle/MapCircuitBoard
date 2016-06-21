@@ -13,8 +13,8 @@ public class NameInformate extends DefaultInformate {
 		register(Repeater.class, 			(a, b, c) -> "Redstone Repeater");
 		register(Comparator.class, 			(a, b, c) -> "Redstone Comparator");
 		register(CommandBlock.class, 		(a, b, c) -> "Command Block");
-		register(MonitorPin.class,			(a, b, c) -> "Inbound Pin");
-		register(OriginatorPin.class,		(a, b, c) -> "Outbound Pin");
+		register(MonitorPin.class,			(a, b, c) -> "Outbound Pin");
+		register(OriginatorPin.class,		(a, b, c) -> "Inbound Pin");
 		
 		register(FullDirectionalWire.class, (a, b, c) -> "Redstone Wire");
 		register(BiInsulatedWire.class,		(a, b, c) -> "Insulated Wire (Bi-Directional)");
