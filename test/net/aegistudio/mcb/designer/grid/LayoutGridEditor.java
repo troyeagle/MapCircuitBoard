@@ -6,8 +6,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 import net.aegistudio.mcb.Data;
-import net.aegistudio.mcb.Facing;
 import net.aegistudio.mcb.designer.IComponentProvider;
+import net.aegistudio.mcb.designer.info.Informate;
 import net.aegistudio.mcb.layout.LayoutGrid;
 import net.aegistudio.mcb.stdaln.AwtGridComponent;
 import net.aegistudio.mpp.Interaction;
@@ -25,7 +25,7 @@ public class LayoutGridEditor extends AwtGridComponent {
 	private static final long serialVersionUID = 1L;
 	public final History history = new History();
 	
-	public LayoutGridEditor(LayoutGrid grid, IComponentProvider provider) {
+	public LayoutGridEditor(Informate informate, LayoutGrid grid, IComponentProvider provider) {
 		super(grid);
 		
 		// Listen to user input.
@@ -59,30 +59,11 @@ public class LayoutGridEditor extends AwtGridComponent {
 		this.addMouseMotionListener(new MouseAdapter() {
 			public void mouseMoved(MouseEvent me) {
 				manipulate(me.getPoint(), (x, y, cell) -> {
-					text = null;
+					text = informate.describe(cell, 
+							cell == null? null : cell.getComponent(), 
+							cell == null? null : cell.getData(Data.class));
 					currentX = me.getX();
 					currentY = me.getY();
-					
-					if(cell != null) {
-						StringBuilder textBuilder = new StringBuilder();
-						String name = cell.getComponent().getClass().getTypeName();
-						textBuilder.append(name.substring(1 + name.lastIndexOf('.')));
-						textBuilder.append(" (" + cell.getColumn() + ", " + cell.getRow() + ")");
-						textBuilder.append("\n");
-						for(Facing facing : Facing.values()) {
-							textBuilder.append(facing.name().charAt(0) + ":");
-							textBuilder.append(cell.getLevel(facing));
-							textBuilder.append(' ');
-						}
-						
-						Object data = cell.getData(Data.class);
-						if(data != null) {
-							textBuilder.append("\n");
-							textBuilder.append("Data: ");
-							textBuilder.append(data.toString());
-						}
-						text = new String(textBuilder);
-					}
 					repaint();
 				});
 			}
