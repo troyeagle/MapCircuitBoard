@@ -40,7 +40,7 @@ public class AwtPaintable implements Paintable {
 		return size * 128;
 	}
 	
-	int size = 5;
+	public int size = 5;
 	public void setSize(int size) {
 		this.size = size;
 	}

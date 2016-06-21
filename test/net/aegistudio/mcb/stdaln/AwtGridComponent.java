@@ -12,7 +12,7 @@ import net.aegistudio.mcb.Grid;
 public class AwtGridComponent extends Component{
 	private static final long serialVersionUID = 1L;
 	
-	protected final Grid grid;
+	public final Grid grid;
 	protected final AwtPaintable paintable;
 	public AwtGridComponent(Grid grid) {
 		this.grid = grid;
