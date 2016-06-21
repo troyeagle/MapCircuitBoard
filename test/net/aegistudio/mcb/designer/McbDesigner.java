@@ -1,5 +1,6 @@
 package net.aegistudio.mcb.designer;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -10,6 +11,7 @@ import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.util.HashMap;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
@@ -19,34 +21,78 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileFilter;
 
+import org.bukkit.Material;
+
+import net.aegistudio.mcb.Air;
+import net.aegistudio.mcb.Cell;
+import net.aegistudio.mcb.Component;
 import net.aegistudio.mcb.ComponentFactory;
+import net.aegistudio.mcb.Data;
 import net.aegistudio.mcb.board.ActualGrid;
 import net.aegistudio.mcb.board.SpectatedActualGrid;
 import net.aegistudio.mcb.designer.grid.ActualGridEditor;
 import net.aegistudio.mcb.designer.grid.History;
 import net.aegistudio.mcb.designer.grid.LayoutGridEditor;
+import net.aegistudio.mcb.designer.info.DescribeInformate;
 import net.aegistudio.mcb.designer.info.Informate;
-import net.aegistudio.mcb.designer.info.PseudoInformate;
+import net.aegistudio.mcb.designer.info.NameInformate;
+import net.aegistudio.mcb.designer.info.StatusInformate;
+import net.aegistudio.mcb.layout.ComponentPlacer;
 import net.aegistudio.mcb.layout.LayoutGrid;
 import net.aegistudio.mcb.layout.SpectatedLayoutGrid;
 import net.aegistudio.mcb.stdaln.AwtGridComponent;
+import net.aegistudio.mcb.unit.Button;
+import net.aegistudio.mcb.unit.CommandBlock;
+import net.aegistudio.mcb.unit.Comparator;
+import net.aegistudio.mcb.unit.Lever;
+import net.aegistudio.mcb.unit.MonitorPin;
+import net.aegistudio.mcb.unit.OriginatorPin;
+import net.aegistudio.mcb.unit.Repeater;
+import net.aegistudio.mcb.unit.Torch;
+import net.aegistudio.mcb.wire.BiInsulatedWire;
+import net.aegistudio.mcb.wire.FullDirectionalWire;
 
-public class McbDesigner extends JFrame {
+public class McbDesigner extends JFrame implements Informate {
 	private static final long serialVersionUID = 1L;
 	
-	public final ComponentFactory table = new ComponentFactory();
-	public final StubProvider provider = new StubProvider(table);
-	public final Informate informate = new PseudoInformate();
+	public final ComponentFactory factory = new ComponentFactory();
+	public final HashMap<Class<?>, ComponentPlacer> placer = new HashMap<>();
+	private void add(ComponentPlacer placer) {
+		System.out.println(placer);
+		this.placer.put(placer.component.getClass(), placer);
+	}
+	
+	{
+		this.add(new ComponentPlacer(Material.AIR, factory.get(factory.id(Air.class))));
+		this.add(new ComponentPlacer(Material.REDSTONE, factory.get(factory.id(FullDirectionalWire.class))));
+		factory.all(Torch.class, torch -> this.add(new ComponentPlacer(Material.REDSTONE_TORCH_ON, torch)));
+		this.add(new ComponentPlacer(Material.LEVER, factory.get(factory.id(Lever.class))));
+		this.add(new ComponentPlacer(Material.WOOD_BUTTON, factory.get(factory.id(Button.class))));
+		this.add(new ComponentPlacer(Material.STONE_BUTTON, factory.get(factory.id(MonitorPin.class))));
+		this.add(new ComponentPlacer(Material.STONE_BUTTON, factory.get(factory.id(OriginatorPin.class))));
+		factory.all(BiInsulatedWire.class, insulated -> this.add(new ComponentPlacer(Material.POWERED_RAIL, insulated)));
+		factory.all(Repeater.class, repeater -> this.add(new ComponentPlacer(Material.DIODE, repeater)));
+		factory.all(Comparator.class, comparator -> this.add(new ComponentPlacer(Material.REDSTONE_COMPARATOR, comparator)));
+		factory.all(CommandBlock.class, command -> this.add(new ComponentPlacer(Material.COMMAND, command)));
+		
+	}
+	public final StubProvider provider = new StubProvider(factory);
 	
 	JMenu file;	JMenuItem newFile, openFile, saveFile;
 	JMenu edit; JMenuItem menuRedo, menuUndo;	JButton toolRedo, toolUndo;
 	JMenu simulate; JMenuItem menuDesign, menuSimulate, menuContinous;
-	JButton toolDesign, toolSimulate, toolContinous, toolStep;
+	JToggleButton toolDesign, toolSimulate; 
+	JButton toolStep;
+	JToggleButton toolContinous;
+	
+	JMenu view; JMenuItem menuShowName, menuShowDescription, menuShowStatus;
+	JToggleButton toolShowName, toolShowDescription, toolShowStatus;
 	
 	public static final int TOOL_BAR_HEIGHT = 40;
 	public static final Dimension TOOL_BAR_SIZE 
@@ -71,6 +117,7 @@ public class McbDesigner extends JFrame {
 		super.add(provider);
 		
 		super.add(toolbar);
+		toolbar.addSeparator();
 		
 		JMenuBar menubar = new JMenuBar();
 		super.setJMenuBar(menubar);
@@ -127,7 +174,14 @@ public class McbDesigner extends JFrame {
 		menuUndo.setAccelerator(KeyStroke.getKeyStroke("ctrl Z"));
 		edit.add(menuUndo);
 		
-		toolUndo = new JButton("Undo");
+		toolUndo = new JButton("Undo") {
+			private static final long serialVersionUID = 1L;
+
+			public void setEnabled(boolean enabled) {
+				super.setEnabled(enabled);
+				super.setForeground(enabled? Color.BLACK : Color.GRAY);
+			}
+		};
 		toolUndo.setToolTipText("Undo");
 		toolUndo.addActionListener(a -> undo());
 		toolUndo.setPreferredSize(TOOL_BAR_SIZE);
@@ -139,11 +193,54 @@ public class McbDesigner extends JFrame {
 		menuRedo.setAccelerator(KeyStroke.getKeyStroke("ctrl Y"));
 		edit.add(menuRedo);
 		
-		toolRedo = new JButton("Redo");
+		toolRedo = new JButton("Redo"){
+			private static final long serialVersionUID = 1L;
+
+			public void setEnabled(boolean enabled) {
+				super.setEnabled(enabled);
+				super.setForeground(enabled? Color.BLACK : Color.GRAY);
+			}
+		};
 		toolRedo.setToolTipText("Redo");
 		toolRedo.addActionListener(a -> redo());
 		toolRedo.setPreferredSize(TOOL_BAR_SIZE);
 		toolbar.add(toolRedo);
+		
+		toolbar.addSeparator();
+		
+		// Menu
+		view = new JMenu("View");
+		menubar.add(view);
+		
+		menuShowName = new JCheckBoxMenuItem("Show name");
+		menuShowName.addActionListener(a -> showName());
+		view.add(menuShowName);
+		
+		toolShowName = new JToggleButton("Name");
+		toolShowName.addActionListener(a -> showName());
+		toolShowName.setToolTipText("Show name");
+		toolShowName.setPreferredSize(TOOL_BAR_SIZE);
+		toolbar.add(toolShowName);
+		
+		menuShowDescription = new JCheckBoxMenuItem("Show description");
+		menuShowDescription.addActionListener(a -> showDescription());
+		view.add(menuShowDescription);
+
+		toolShowDescription = new JToggleButton("Desc");
+		toolShowDescription.addActionListener(a -> showDescription());
+		toolShowDescription.setToolTipText("Show description");
+		toolShowDescription.setPreferredSize(TOOL_BAR_SIZE);
+		toolbar.add(toolShowDescription);
+		
+		menuShowStatus = new JCheckBoxMenuItem("Show status");
+		menuShowStatus.addActionListener(a -> showStatus());
+		view.add(menuShowStatus);
+		
+		toolShowStatus = new JToggleButton("Stat");
+		toolShowStatus.setToolTipText("Show status");
+		toolShowStatus.addActionListener(a -> showStatus());
+		toolShowStatus.setPreferredSize(TOOL_BAR_SIZE);
+		toolbar.add(toolShowStatus);
 		
 		toolbar.addSeparator();
 		
@@ -157,7 +254,7 @@ public class McbDesigner extends JFrame {
 		menuDesign.setSelected(true);
 		simulate.add(menuDesign);
 		
-		toolDesign = new JButton("Design");
+		toolDesign = new JToggleButton("Design");
 		toolDesign.setToolTipText("Design");
 		toolDesign.addActionListener(a -> endSimulate());
 		toolDesign.setPreferredSize(TOOL_BAR_SIZE);
@@ -168,7 +265,7 @@ public class McbDesigner extends JFrame {
 		menuSimulate.addActionListener(a -> beginSimulate());
 		simulate.add(menuSimulate);
 		
-		toolSimulate = new JButton("Simulate");
+		toolSimulate = new JToggleButton("Simulate");
 		toolSimulate.setToolTipText("Simulate");
 		toolSimulate.addActionListener(a -> beginSimulate());
 		toolSimulate.setPreferredSize(TOOL_BAR_SIZE);
@@ -181,12 +278,15 @@ public class McbDesigner extends JFrame {
 		menuContinous.setSelected(true);
 		simulate.add(menuContinous);
 		
-		toolContinous = new JButton("Cont");
+		toolContinous = new JToggleButton("Cont");
+		toolContinous.setToolTipText("Enable/Disable Continous");
 		toolContinous.addActionListener(a -> continousSwitch());
 		toolContinous.setPreferredSize(TOOL_BAR_SIZE);
+		toolContinous.setSelected(true);
 		toolbar.add(toolContinous);
 		
 		toolStep = new JButton("Step");
+		toolStep.setToolTipText("Step");
 		toolStep.addActionListener(a -> step());
 		toolStep.setSelected(true);
 		toolStep.setPreferredSize(TOOL_BAR_SIZE);
@@ -198,8 +298,8 @@ public class McbDesigner extends JFrame {
 		JMenuItem instruction = new JMenuItem("Instruction");
 		instruction.addActionListener(e -> {
 			JOptionPane.showMessageDialog(this, "<html><p>Please follow the instruction:</p>"
-				+ "<li><b>Left Click</b>: Place or remove components"
-				+ "<li><b>Right Click</b>: Interact with pointing component"
+				+ "<li><b>Left Click</b>: Place/remove components"
+				+ "<li><b>Right Click</b>: Place/interact with pointing component"
 				+ "<li><b>Scroll Up/Down</b>: Select previous/next component"
 				+ "</html>", "Usage", JOptionPane.PLAIN_MESSAGE);
 		});
@@ -208,11 +308,7 @@ public class McbDesigner extends JFrame {
 		
 		JMenuItem about = new JMenuItem("About");
 		about.addActionListener(e -> {
-			JOptionPane.showMessageDialog(this, "<html><b>Map Circuit Board</b> - Layout Debugger (beta)"
-				+ "<br><b>Author</b>: aegistudio"
-				+ "<br><b>Purpose</b>:<br>"
-				+ "<li>interactive test of layout"
-				+ "<li>design layout</html>", 
+			JOptionPane.showMessageDialog(this, "<html><b>Map Circuit Board Designer</b></html>", 
 				"About", JOptionPane.INFORMATION_MESSAGE);
 		});
 		help.add(about);
@@ -259,7 +355,7 @@ public class McbDesigner extends JFrame {
 	public void newGridComponent() {
 		if(!ensureSaved()) return;
 		LayoutGrid grid = new SpectatedLayoutGrid(); 
-		resetGridComponent(new LayoutGridEditor(informate, grid, provider));
+		resetGridComponent(new LayoutGridEditor(this, placer, grid, provider));
 		updateHistory();
 	}
 	
@@ -285,8 +381,8 @@ public class McbDesigner extends JFrame {
 		if(!ensureSaved()) return;
 		if(JFileChooser.APPROVE_OPTION == chooser.showOpenDialog(this)) try {
 			FileInputStream input = new FileInputStream(chooser.getSelectedFile());
-			LayoutGrid grid = new LayoutGrid();	grid.load(input, table);
-			resetGridComponent(new LayoutGridEditor(informate, grid, provider));
+			LayoutGrid grid = new LayoutGrid();	grid.load(input, factory);
+			resetGridComponent(new LayoutGridEditor(this, placer, grid, provider));
 			updateHistory();
 		}
 		catch(Exception e) {
@@ -312,7 +408,7 @@ public class McbDesigner extends JFrame {
 						!= JOptionPane.YES_OPTION) return false;
 			}
 			FileOutputStream output = new FileOutputStream(save);
-			layout.grid.save(output, table);
+			layout.grid.save(output, factory);
 			layout.history.clear();
 			updateHistory();
 			return true;
@@ -333,30 +429,37 @@ public class McbDesigner extends JFrame {
 					
 					menuDesign.setSelected(false);
 					menuDesign.setEnabled(true);
+					
 					toolDesign.setEnabled(true);
+					toolDesign.setSelected(false);
 					
 					menuSimulate.setSelected(true);
 					menuSimulate.setEnabled(false);
 					toolSimulate.setEnabled(false);
+					toolSimulate.setSelected(true);
 					
 					toolContinous.setVisible(true);
 					toolStep.setVisible(true);
 					
 					menuRedo.setEnabled(false);
 					menuUndo.setEnabled(false);
+					toolRedo.setEnabled(false);
+					toolUndo.setEnabled(false);
 				}
 				else {
 					menuDesign.setSelected(true);
 					menuDesign.setEnabled(false);
 					toolDesign.setEnabled(false);
+					toolDesign.setSelected(true);
 					
 					toolContinous.setVisible(false);
 					toolStep.setVisible(false);
 					
 					menuSimulate.setSelected(false);
 					menuSimulate.setEnabled(true);
-					toolSimulate.setEnabled(true);
 					
+					toolSimulate.setEnabled(true);
+					toolSimulate.setSelected(false);
 					updateHistory();
 				}
 
@@ -377,7 +480,7 @@ public class McbDesigner extends JFrame {
 	boolean continous = true;
 	public void beginSimulate() {
 		ActualGrid grid = new SpectatedActualGrid((LayoutGrid) this.layout.grid); 
-		resetGridComponent(new ActualGridEditor(informate, grid));
+		resetGridComponent(new ActualGridEditor(this, grid));
 	}
 	
 	public void endSimulate() {
@@ -392,6 +495,7 @@ public class McbDesigner extends JFrame {
 	public void continousSwitch() {
 		continous = !continous;
 		menuContinous.setSelected(continous);
+		toolContinous.setSelected(continous);
 	}
 	
 	public void updateHistory() {
@@ -427,6 +531,63 @@ public class McbDesigner extends JFrame {
 		}
 		return true;
 	}
+
+
+	public final Informate informate = new StatusInformate();
+	public final Informate descrption = new DescribeInformate();
+	public final Informate name = new NameInformate();
+	@Override
+	public String describe(Cell cell, Component component, Data data) {
+		StringBuilder builder = new StringBuilder();
+		
+		if(showName) {
+			String name = this.name.describe(cell, component, data);
+			if(name != null) {
+				builder.append("\n\n");
+				builder.append(name);
+			}
+		}
+		
+		if(showDescription) {
+			String description = this.descrption.describe(cell, component, data);
+			if(description != null) {
+				builder.append("\n\n");
+				builder.append(description);
+			}
+		}
+		
+		if(showStatus) {
+			String status = this.informate.describe(cell, component, data);
+			if(status != null) {
+				builder.append("\n\n");
+				builder.append(status);
+			}
+		}
+		
+		String result = new String(builder);
+		return result.length() > 0? result.trim() : null;
+	}
+
+	boolean showName;
+	public void showName() {
+		showName = !showName;
+		menuShowName.setSelected(showName);
+		toolShowName.setSelected(showName);
+	}
+	
+	boolean showDescription;
+	public void showDescription() {
+		showDescription = !showDescription;
+		menuShowDescription.setSelected(showDescription);
+		toolShowDescription.setSelected(showDescription);
+	}
+	
+	boolean showStatus;
+	public void showStatus() {
+		showStatus = !showStatus;
+		menuShowStatus.setSelected(showStatus);
+		toolShowStatus.setSelected(showStatus);
+	}
 	
 	public static void main(String[] arguments) {
 		try {UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");} catch(Exception e) {}
@@ -435,6 +596,7 @@ public class McbDesigner extends JFrame {
 		frame.newGridComponent();
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
+		frame.showName();
 		frame.autoRefresh.start();
 	}
 }

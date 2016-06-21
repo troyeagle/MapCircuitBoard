@@ -4,10 +4,16 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.HashMap;
+
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import net.aegistudio.mcb.Data;
 import net.aegistudio.mcb.designer.IComponentProvider;
 import net.aegistudio.mcb.designer.info.Informate;
+import net.aegistudio.mcb.layout.ComponentPlacer;
 import net.aegistudio.mcb.layout.LayoutGrid;
 import net.aegistudio.mcb.stdaln.AwtGridComponent;
 import net.aegistudio.mpp.Interaction;
@@ -25,7 +31,7 @@ public class LayoutGridEditor extends AwtGridComponent {
 	private static final long serialVersionUID = 1L;
 	public final History history = new History();
 	
-	public LayoutGridEditor(Informate informate, LayoutGrid grid, IComponentProvider provider) {
+	public LayoutGridEditor(Informate informate, HashMap<Class<?>, ComponentPlacer> placerMap, LayoutGrid grid, IComponentProvider provider) {
 		super(grid);
 		
 		// Listen to user input.
@@ -35,9 +41,15 @@ public class LayoutGridEditor extends AwtGridComponent {
 					boolean right = me.getButton() == MouseEvent.BUTTON3;
 					Runnable todo = null;
 					
+					
 					if(cell != null) 
-						if(right) todo = () -> cell.getComponent().interact(cell,			// Right Click to add or interact.
-									new Interaction(x, y, null, null, null, right));
+						if(right) {
+							ComponentPlacer placer = placerMap.get(cell.getComponent().getClass());
+							Player player = new PseudoPlayer(me.isShiftDown() && provider.getSelected() != null?
+										new ItemStack(placer.type): new ItemStack(Material.AIR));
+							todo = () -> cell.getComponent().interact(cell,			// Right Click to add or interact.
+									new Interaction(x, y, player, null, null, right));
+						}
 						else todo = () -> grid.setCell(y / 4, x / 4, null);
 					else todo = () -> grid.setCell(y / 4, x / 4, provider.getSelected());	// Left click to remove.
 					
