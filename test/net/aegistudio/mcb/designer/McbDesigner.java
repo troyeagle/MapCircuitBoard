@@ -2,6 +2,8 @@ package net.aegistudio.mcb.designer;
 
 import java.awt.Color;
 import java.awt.Dimension;
+//import java.awt.Point;
+//import java.awt.Toolkit;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -339,19 +341,27 @@ public class McbDesigner extends JFrame implements Informate {
 		gridComponent.setLocation(0, TOOL_BAR_HEIGHT);
 		gridComponent.addMouseListener(refreshAdapter);
 		
+		//Point originalLocation = this.isVisible()? 
+		//		this.getLocation() : null;
 
 		toolbar.setSize(gridComponent.getWidth(), TOOL_BAR_HEIGHT);
 		toolbar.setLocation(0, 0);
 		
 		this.add(gridComponent);
-		if(newComponent instanceof LayoutGridEditor)
+		if(newComponent instanceof LayoutGridEditor) {
 			this.layout = (LayoutGridEditor) newComponent;
+			this.provider.setVisible(true);
+		}
+		else this.provider.setVisible(false);
 		
 		this.provider.setLocation((gridComponent.getWidth() - this.provider.getWidth()) / 2 , 
 				gridComponent.getHeight() + TOOL_BAR_HEIGHT);
 		
-		this.setSize(gridComponent.getWidth(), gridComponent.getHeight() + provider.getHeight()
+		this.setSize(gridComponent.getWidth(), gridComponent.getHeight() 
+				//+ (provider.isVisible()? provider.getHeight() : 0) 
+				+ provider.getHeight()
 				+ this.getJMenuBar().getPreferredSize().height + TOOL_BAR_HEIGHT);
+		
 		this.repaint();
 	}
 	
