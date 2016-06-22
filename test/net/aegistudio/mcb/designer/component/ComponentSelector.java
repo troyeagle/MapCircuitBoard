@@ -30,6 +30,7 @@ import net.aegistudio.mcb.designer.component.item.ButtonComponent;
 import net.aegistudio.mcb.designer.component.item.CommandBlockComponent;
 import net.aegistudio.mcb.designer.component.item.ComparatorComponent;
 import net.aegistudio.mcb.designer.component.item.ComponentItem;
+import net.aegistudio.mcb.designer.component.item.LeverComponent;
 import net.aegistudio.mcb.designer.component.item.PinComponent;
 import net.aegistudio.mcb.designer.component.item.RepeaterComponent;
 import net.aegistudio.mcb.designer.component.item.TorchComponent;
@@ -66,6 +67,14 @@ public class ComponentSelector extends Control implements IComponentProvider {
 	private final McTooltip tipBoard;
 	
 	public ComponentSelector(Informate provider) {
+		try {
+			Font f = Font.createFont(Font.TRUETYPE_FONT, new File("assets/mcfont.ttf"));
+			GraphicsEnvironment genv = GraphicsEnvironment.getLocalGraphicsEnvironment();
+			genv.registerFont(f);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 		this.setLayout(null);
 		
 		this.provider = provider;
@@ -131,6 +140,7 @@ public class ComponentSelector extends Control implements IComponentProvider {
 	private void initPages() {
 		this.components.add(new WireComponent());
 		this.components.add(new TorchComponent());
+		this.components.add(new LeverComponent());
 		this.components.add(new ButtonComponent());
 		this.components.add(new PinComponent());
 		this.components.add(new BiInsulatedWireComponent());
@@ -360,13 +370,6 @@ public class ComponentSelector extends Control implements IComponentProvider {
 	}
 
 	public static void main(String[] args) {
-		try {
-			Font f = Font.createFont(Font.TRUETYPE_FONT, new File("assets/mcfont.ttf"));
-			GraphicsEnvironment genv = GraphicsEnvironment.getLocalGraphicsEnvironment();
-			genv.registerFont(f);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 		
 		JFrame frame = new JFrame();
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
