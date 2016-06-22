@@ -12,13 +12,13 @@ public class RepeaterComponent extends ComponentItem {
 	
 	public RepeaterComponent(int level) {
 		super("assets/repeater.png", repeaters[level]);
-		this.state.setText("lv " + (level + 1));
+		this.setText("lv " + (level + 1));
 	}
 
 	public static List<RepeaterComponent> getAll() {
 		List<RepeaterComponent> components = new ArrayList<>();
 		for (int i = repeaters.length - 1; i >= 0; i--) {
-			components.add(new RepeaterComponent(i));
+			components.add(0, new RepeaterComponent(i));
 		}
 		return components;
 	}

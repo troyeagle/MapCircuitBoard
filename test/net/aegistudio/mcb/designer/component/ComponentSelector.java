@@ -1,6 +1,7 @@
 package net.aegistudio.mcb.designer.component;
 
 import java.awt.AWTEvent;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -9,6 +10,8 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.io.File;
 import java.util.ArrayList;
@@ -18,6 +21,7 @@ import javax.swing.JFrame;
 import javax.swing.Popup;
 import javax.swing.PopupFactory;
 
+import net.aegistudio.mcb.Air;
 import net.aegistudio.mcb.Component;
 import net.aegistudio.mcb.ComponentFactory;
 import net.aegistudio.mcb.designer.IComponentProvider;
@@ -30,8 +34,9 @@ import net.aegistudio.mcb.designer.component.item.PinComponent;
 import net.aegistudio.mcb.designer.component.item.RepeaterComponent;
 import net.aegistudio.mcb.designer.component.item.TorchComponent;
 import net.aegistudio.mcb.designer.component.item.WireComponent;
+import net.aegistudio.mcb.designer.info.DescribeInformate;
 import net.aegistudio.mcb.designer.info.Informate;
-import net.aegistudio.mcb.designer.info.McInformate;
+import net.aegistudio.mcb.designer.info.NameInformate;
 
 
 public class ComponentSelector extends Control implements IComponentProvider {
@@ -42,7 +47,7 @@ public class ComponentSelector extends Control implements IComponentProvider {
 	private final List<ComponentItem> components;
 	private final List<ComponentPage> pages;
 	
-	private boolean showTip;
+	private boolean f3On;
 	
 	private int currentPage = -1;
 	private int indexInPage = -1;
@@ -55,18 +60,20 @@ public class ComponentSelector extends Control implements IComponentProvider {
 	private final Button previousPageButton;
 	private final Button nextPageButton;
 	
-	private final Informate informate;
+	private final Informate nameProvider;
+	private final Informate descriptionProvider;
 	
 	private final PopupFactory popupFactory;
 	private Popup tip;
-	private final Sign tipBoard;
-
+	private final McTooltip tipBoard;
+	
 	public ComponentSelector() {
 		this.setLayout(null);
 		
-		this.informate = new McInformate();
+		this.nameProvider = new NameInformate();
+		this.descriptionProvider = new DescribeInformate();
 		this.popupFactory = new PopupFactory();
-		this.tipBoard = new Sign();
+		this.tipBoard = new McTooltip();
 		
 		ImageControl background = new ImageControl("assets/hotbar.png");
 		background.setLocation(2, 2);
@@ -137,6 +144,36 @@ public class ComponentSelector extends Control implements IComponentProvider {
 		ComponentPage page = null;
 		
 		for (ComponentItem c : this.components) {
+			MouseAdapter adapter = new MouseAdapter() {
+				@Override
+				public void mouseEntered(MouseEvent e) {
+					if (!f3On) {
+						String name = getName(c.getComponent());
+						String text = c.getText();
+						if (text != null && !text.isEmpty()) {
+							name += " (" + text + ")";
+						}
+						
+						tipBoard.setText(name);
+						
+						Point p = c.getLocationOnScreen();
+						Dimension size = c.getSize();
+						p.x += size.width / 2 - tipBoard.getWidth() / 2;
+						p.y -= tipBoard.getHeight();
+						
+						showTooltip(p.x, p.y);
+					}
+				}
+				
+				@Override
+				public void mouseExited(MouseEvent e) {
+					if (!f3On) {
+						disposeTooltip();
+					}
+				}
+			};
+			c.addMouseListener(adapter);
+			
 			if (page == null || !page.addComponent(c)) {
 				page = new ComponentPage(this, pageSize);
 				this.pages.add(page);
@@ -194,7 +231,8 @@ public class ComponentSelector extends Control implements IComponentProvider {
 					this.nextPage();
 					break;
 				case KeyEvent.VK_F3:
-					this.setTipVisible(!this.showTip);
+					this.f3On = !this.f3On;
+					this.updateDetailTooltip();
 					break;
 				}
 				break;
@@ -208,7 +246,7 @@ public class ComponentSelector extends Control implements IComponentProvider {
 		
 		this.indexInPage = index;
 		this.getCurrentPage().setSelected(index);
-		this.updateTip();
+		this.updateDetailTooltip();
 		this.repaint();
 	}
 	
@@ -269,34 +307,55 @@ public class ComponentSelector extends Control implements IComponentProvider {
 	public void previousComponent() {
 		this.setSelectedInPage((this.indexInPage + pageSize - 1) % pageSize);
 	}
-	
-	private void setTipVisible(boolean b) {
-		this.showTip = b;
-		this.updateTip();
+
+	private void updateDetailTooltip() {
+		this.disposeTooltip();
+		if (this.f3On) {
+			ComponentItem c = this.getSelectedComponent();
+			Component component = c.getComponent();
+			if (component == Air.INSTANCE) return;
+			
+			Point p = c.getLocationOnScreen();
+			
+			String text;
+			try {
+				text = this.descriptionProvider.describe(null, c.getComponent(), null);	
+			} catch (Exception e) {
+				text = this.getName(component) + ":\nNo description for it :(";
+			}
+			
+			this.tipBoard.setText(text);
+			p.x += c.getWidth() / 2 - tipBoard.getWidth() / 2;
+			p.y -= tipBoard.getHeight();
+
+			this.showTooltip(p.x, p.y);
+		}
 	}
 	
-	private void updateTip() {
+	private void showTooltip(int x, int y) {
+		this.disposeTooltip();
+		this.tip = this.popupFactory.getPopup(this, this.tipBoard, x, y);
+		this.tip.show();
+	}
+	
+	private void disposeTooltip() {
 		if (this.tip != null)  {
 			this.tip.hide();
 			this.tip = null;
 		}
-		if (this.showTip) {
-			ComponentItem c = this.getSelectedComponent();
-			Point p = c.getLocationOnScreen();
-			Dimension d = c.getSize();
-			
-			try {
-				this.tipBoard.setText(this.informate.describe(null, c.getComponent(), null));	
-			} catch (Exception e) {
-				this.tipBoard.setText(c.getComponent().getClass().getSimpleName()
-						+":\nNo description for it :(");
-			}
-			
-			int x = p.x + d.width / 2;
-			int y = p.y + d.height / 2 - this.tipBoard.getHeight();
-			this.tip = this.popupFactory.getPopup(this, this.tipBoard, x, y);
-			this.tip.show();
+	}
+	
+	private String getName(Component c) {
+		String name;
+		try {
+			name = this.nameProvider.describe(null, c, null);					
+		} catch (Exception e2) {
+			name = null;
 		}
+		if (name == null) {
+			name = c.getClass().getSimpleName();
+		}
+		return name;
 	}
 	
 	private ComponentItem getSelectedComponent() {
@@ -328,8 +387,14 @@ public class ComponentSelector extends Control implements IComponentProvider {
 		JFrame frame = new JFrame();
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		ComponentSelector c = new ComponentSelector();
-		frame.add(c);
-		frame.setSize(500, 300);
+		Control empty = new Control();
+		empty.setPreferredSize(new Dimension(800, 400));
+		Control container = new Control();
+		container.add(c);
+		frame.add(container, BorderLayout.SOUTH);
+		frame.add(empty);
+		frame.pack();
+		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
 	}
 }

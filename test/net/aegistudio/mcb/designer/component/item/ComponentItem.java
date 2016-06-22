@@ -1,15 +1,13 @@
 package net.aegistudio.mcb.designer.component.item;
 
-import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Font;
 
-import javax.swing.JLabel;
 import javax.swing.SwingConstants;
 
 import net.aegistudio.mcb.Component;
 import net.aegistudio.mcb.designer.component.Control;
 import net.aegistudio.mcb.designer.component.ImageControl;
+import net.aegistudio.mcb.designer.component.LabelWithShadow;
 
 public class ComponentItem extends Control {
 	private static final long serialVersionUID = 1L;
@@ -23,20 +21,18 @@ public class ComponentItem extends Control {
 	
 	protected Component component;
 	
-	protected final JLabel state;
+	protected final LabelWithShadow state;
+	private String text;
 	
 	public ComponentItem(String iconPath, Component component) {
 		this.setLayout(null);
 	
 		this.component = component;
 		
-		this.state = new JLabel();
-		this.state.setOpaque(false);
+		this.state = new LabelWithShadow(false);
 		this.state.setHorizontalAlignment(SwingConstants.RIGHT);
 		this.state.setVerticalAlignment(SwingConstants.BOTTOM);
-		this.state.setForeground(Color.WHITE);
-		this.state.setFont(new Font("Minecraft Regular", Font.PLAIN, 12));
-		this.state.setBounds(0, 20, 40, 20);
+		this.state.setSize(42, 42);
 		
 		this.add(this.state);
 		
@@ -51,6 +47,20 @@ public class ComponentItem extends Control {
 		this.border = new ImageControl(selectedBorder);
 		this.border.setVisible(false);
 		this.add(this.border);
+	}
+	
+	public void setText(String text) {
+		this.text = text;
+		text = "<html><head><style type=\"text/css\">"
+				+ "body { font-family: Minecraft Regular; font-size: 10; }"
+				+ "</style></head><body>"
+				+ text
+				+ "</body></html>";
+		this.state.setText(text);
+	}
+	
+	public String getText() {
+		return this.text;
 	}
 	
 	public void setSelected(boolean selected) {

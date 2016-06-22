@@ -10,7 +10,7 @@ public class ComparatorComponent extends ComponentItem {
 
 	public ComparatorComponent(boolean subtractive) {
 		super("assets/comparator.png", Comparator.INSTANCES[0][subtractive ? 1 : 0]);
-		this.state.setText(subtractive ? "on" : "off");
+		this.setText(subtractive ? "on" : "off");
 	}
 
 	public static List<ComparatorComponent> getAll() {
