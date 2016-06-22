@@ -219,7 +219,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuShowName.addActionListener(a -> showName());
 		view.add(menuShowName);
 		
-		toolShowName = new JToggleButton("Name");
+		toolShowName = new JToggleButton(new ImageIcon("assets/show_name.png"));
 		toolShowName.addActionListener(a -> showName());
 		toolShowName.setToolTipText("Show name");
 		toolShowName.setPreferredSize(TOOL_BAR_SIZE);
@@ -229,7 +229,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuShowDescription.addActionListener(a -> showDescription());
 		view.add(menuShowDescription);
 
-		toolShowDescription = new JToggleButton("Desc");
+		toolShowDescription = new JToggleButton(new ImageIcon("assets/show_description.png"));
 		toolShowDescription.addActionListener(a -> showDescription());
 		toolShowDescription.setToolTipText("Show description");
 		toolShowDescription.setPreferredSize(TOOL_BAR_SIZE);
@@ -239,7 +239,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuShowStatus.addActionListener(a -> showStatus());
 		view.add(menuShowStatus);
 		
-		toolShowStatus = new JToggleButton("Stat");
+		toolShowStatus = new JToggleButton(new ImageIcon("assets/show_status.png"));
 		toolShowStatus.setToolTipText("Show status");
 		toolShowStatus.addActionListener(a -> showStatus());
 		toolShowStatus.setPreferredSize(TOOL_BAR_SIZE);
@@ -268,7 +268,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuSimulate.addActionListener(a -> beginSimulate());
 		simulate.add(menuSimulate);
 		
-		toolSimulate = new JToggleButton("Simulate");
+		toolSimulate = new JToggleButton(new ImageIcon("assets/simulation.png"));
 		toolSimulate.setToolTipText("Simulate");
 		toolSimulate.addActionListener(a -> beginSimulate());
 		toolSimulate.setPreferredSize(TOOL_BAR_SIZE);
@@ -281,7 +281,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuContinous.setSelected(true);
 		simulate.add(menuContinous);
 		
-		toolContinous = new JToggleButton("Cont");
+		toolContinous = new JToggleButton(new ImageIcon("assets/continous.png"));
 		toolContinous.setToolTipText("Enable/Disable Continous");
 		toolContinous.addActionListener(a -> continousSwitch());
 		toolContinous.setPreferredSize(TOOL_BAR_SIZE);
