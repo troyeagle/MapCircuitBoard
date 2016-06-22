@@ -125,7 +125,7 @@ public class McbDesigner extends JFrame implements Informate {
 		toolbar.addSeparator();
 		
 		JMenuBar menubar = new JMenuBar();
-		super.setJMenuBar(menubar);
+		//super.setJMenuBar(menubar);
 		
 		// File Menu.
 		file = new JMenu("File");
@@ -360,7 +360,7 @@ public class McbDesigner extends JFrame implements Informate {
 		this.setSize(gridComponent.getWidth(), gridComponent.getHeight() 
 				//+ (provider.isVisible()? provider.getHeight() : 0) 
 				+ provider.getHeight()
-				+ this.getJMenuBar().getPreferredSize().height + TOOL_BAR_HEIGHT);
+				+ /*this.getJMenuBar().getPreferredSize().height +*/ TOOL_BAR_HEIGHT);
 		
 		this.repaint();
 	}

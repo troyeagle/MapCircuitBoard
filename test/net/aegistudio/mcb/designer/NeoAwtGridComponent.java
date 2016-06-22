@@ -19,12 +19,16 @@ public class NeoAwtGridComponent extends AwtGridComponent {
 	
 	public McTooltip toolTip = new McTooltip();
 	public Popup popup;
+	public String previous;
 	
 	public void paint(Graphics g) {
 		paintable.setGraphics(g);
 		this.grid.paint(paintable);
 		
 		if(text != null) {
+			if(previous != null && !previous.equals(text))
+				disposePopup();
+			
 			toolTip.setText(text);
 	
 			if(popup == null) {
@@ -35,7 +39,14 @@ public class NeoAwtGridComponent extends AwtGridComponent {
 									location.y + currentY);
 				popup.show();
 			}
-		} else if(popup != null) {
+		}
+		else disposePopup();
+		
+		previous = text;
+	}
+	
+	public void disposePopup() {
+		if(popup != null) {
 			popup.hide();
 			popup = null;
 		}
@@ -43,9 +54,6 @@ public class NeoAwtGridComponent extends AwtGridComponent {
 	
 	public void setVisible(boolean v) {
 		super.setVisible(v);
-		if(popup != null) {
-			popup.hide();
-			popup = null;
-		}
+		disposePopup();
 	}
 }
