@@ -37,6 +37,7 @@ import net.aegistudio.mcb.ComponentFactory;
 import net.aegistudio.mcb.Data;
 import net.aegistudio.mcb.board.ActualGrid;
 import net.aegistudio.mcb.board.SpectatedActualGrid;
+import net.aegistudio.mcb.designer.component.ComponentSelector;
 import net.aegistudio.mcb.designer.grid.ActualGridEditor;
 import net.aegistudio.mcb.designer.grid.History;
 import net.aegistudio.mcb.designer.grid.LayoutGridEditor;
@@ -65,7 +66,6 @@ public class McbDesigner extends JFrame implements Informate {
 	public final ComponentFactory factory = new ComponentFactory();
 	public final HashMap<Class<?>, ComponentPlacer> placer = new HashMap<>();
 	private void add(ComponentPlacer placer) {
-		System.out.println(placer);
 		this.placer.put(placer.component.getClass(), placer);
 	}
 	
@@ -81,9 +81,8 @@ public class McbDesigner extends JFrame implements Informate {
 		factory.all(Repeater.class, repeater -> this.add(new ComponentPlacer(Material.DIODE, repeater)));
 		factory.all(Comparator.class, comparator -> this.add(new ComponentPlacer(Material.REDSTONE_COMPARATOR, comparator)));
 		factory.all(CommandBlock.class, command -> this.add(new ComponentPlacer(Material.COMMAND, command)));
-		
 	}
-	public final StubProvider provider = new StubProvider(factory);
+	public final ComponentSelector provider;
 	
 	JMenu file;	JMenuItem newFile, openFile, saveFile;
 	JMenu edit; JMenuItem menuRedo, menuUndo;	JButton toolRedo, toolUndo;
@@ -115,7 +114,10 @@ public class McbDesigner extends JFrame implements Informate {
 				}
 			}
 		});
-		super.add(provider);
+		
+		ComponentSelector itembar = new ComponentSelector(this);
+		this.provider = itembar;
+		super.add(itembar);
 		
 		super.add(toolbar);
 		toolbar.addSeparator();
@@ -345,7 +347,10 @@ public class McbDesigner extends JFrame implements Informate {
 		if(newComponent instanceof LayoutGridEditor)
 			this.layout = (LayoutGridEditor) newComponent;
 		
-		this.setSize(gridComponent.getWidth(), gridComponent.getHeight() 
+		this.provider.setLocation((gridComponent.getWidth() - this.provider.getWidth()) / 2 , 
+				gridComponent.getHeight() + TOOL_BAR_HEIGHT);
+		
+		this.setSize(gridComponent.getWidth(), gridComponent.getHeight() + provider.getHeight()
 				+ this.getJMenuBar().getPreferredSize().height + TOOL_BAR_HEIGHT);
 		this.repaint();
 	}
@@ -541,7 +546,7 @@ public class McbDesigner extends JFrame implements Informate {
 	public String describe(Cell cell, Component component, Data data) {
 		StringBuilder builder = new StringBuilder();
 		
-		if(showName) {
+		if((cell == null && data == null) || showName) {
 			String name = this.name.describe(cell, component, data);
 			if(name != null) {
 				builder.append("\n\n");
@@ -557,7 +562,7 @@ public class McbDesigner extends JFrame implements Informate {
 			}
 		}
 		
-		if(showStatus) {
+		if((cell != null && data != null) && showStatus) {
 			String status = this.informate.describe(cell, component, data);
 			if(status != null) {
 				builder.append("\n\n");
