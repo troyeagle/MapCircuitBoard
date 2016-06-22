@@ -9,26 +9,56 @@ public class McTooltip extends Control {
 
 	private final LabelWithShadow text;
 	
+	private String style;
+	private int fontSize;
+	
+	private String rawText;
+	
 	public McTooltip() {
 		this.setLayout(null);
 		
 		this.text = new LabelWithShadow(true);
 		this.text.setLocation(10, 10);
 		
+		this.setFontSize(12);
+		
 		this.add(this.text);
 	}
 	
+	public void setFontSize(int size) {
+		if (this.fontSize != size) {
+			this.fontSize = size;
+			this.style = "body { font-family: Minecraft Regular; font-size: " + size + "; }";
+			this.setText(this.rawText);
+		}
+	}
+	
+	public int getFontSize() {
+		return this.fontSize;
+	}
+	
 	public void setText(String text) {
-		text = "<html><head><style type=\"text/css\">"
-				+ "body { font-family: Minecraft Regular; font-size: 12; }"
-				+ "</style></head><body>"
-				+ text.replaceAll("(\r\n|\n)", "<br>")
-				+ "</body></html>";
+		this.rawText = text;
+		text = this.format(text);
 		this.text.setText(text);
 		Dimension size = this.text.getPreferredSize();
 		size.width += 20;
 		size.height += 20;
 		this.updateSize(size);
+	}
+	
+	public String getText() {
+		return this.rawText;
+	}
+	
+	private String format(String text) {
+		if (text == null) return "";
+		
+		return "<html><head><style type=\"text/css\">"
+				+ this.style
+				+ "</style></head><body>"
+				+ text.replaceAll("(\r\n|\n)", "<br>")
+				+ "</body></html>";
 	}
 	
 	public void updateSize(Dimension size) {
