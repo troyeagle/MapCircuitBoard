@@ -562,7 +562,7 @@ public class McbDesigner extends JFrame implements Informate {
 			}
 		}
 		
-		if((cell != null && data != null) && showStatus) {
+		if((!(cell == null && data == null)) && showStatus) {
 			String status = this.informate.describe(cell, component, data);
 			if(status != null) {
 				builder.append("\n\n");
