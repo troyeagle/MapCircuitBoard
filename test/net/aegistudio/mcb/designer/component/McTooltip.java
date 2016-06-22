@@ -1,39 +1,82 @@
 package net.aegistudio.mcb.designer.component;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Graphics;
+
+import javax.swing.BorderFactory;
 
 public class McTooltip extends Control {
 	private static final long serialVersionUID = 1L;
 
 	private final LabelWithShadow text;
 	
+	private final LabelWithShadow addition;
+	
+	private String style;
+	private int fontSize;
+	
+	private String rawText;
+	private String rawAddition;
+	
 	public McTooltip() {
-		this.setLayout(null);
+		this.setLayout(new BorderLayout());
+		this.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 		
 		this.text = new LabelWithShadow(true);
-		this.text.setLocation(10, 10);
+		
+		this.addition = new LabelWithShadow(true);
+		this.addition.setTextColor(Color.GRAY);
+		
+		this.setFontSize(12);
 		
 		this.add(this.text);
+		this.add(this.addition, BorderLayout.SOUTH);
+	}
+	
+	public void setFontSize(int size) {
+		if (this.fontSize != size) {
+			this.fontSize = size;
+			this.style = "body { font-family: Minecraft Regular; font-size: " + size + "; }";
+			this.setText(this.rawText);
+			this.setAdditionText(this.rawAddition);
+		}
+	}
+	
+	public int getFontSize() {
+		return this.fontSize;
 	}
 	
 	public void setText(String text) {
-		text = "<html><head><style type=\"text/css\">"
-				+ "body { font-family: Minecraft Regular; font-size: 12; }"
+		this.rawText = text;
+		text = this.format(text);
+		this.text.setText(text);
+		this.setSize(this.getPreferredSize());
+	}
+	
+	public void setAdditionText(String text) {
+		this.rawAddition = text;
+		text = this.format(text);
+		this.addition.setText(text);
+		this.setSize(this.getPreferredSize());
+	}
+	
+	public String getAddtionText() {
+		return this.rawAddition;
+	}
+	
+	public String getText() {
+		return this.rawText;
+	}
+	
+	private String format(String text) {
+		if (text == null) return "";
+		
+		return "<html><head><style type=\"text/css\">"
+				+ this.style
 				+ "</style></head><body>"
 				+ text.replaceAll("(\r\n|\n)", "<br>")
 				+ "</body></html>";
-		this.text.setText(text);
-		Dimension size = this.text.getPreferredSize();
-		size.width += 20;
-		size.height += 20;
-		this.updateSize(size);
-	}
-	
-	public void updateSize(Dimension size) {
-		this.setSize(size);
-		this.setPreferredSize(size);
 	}
 	
 	@Override

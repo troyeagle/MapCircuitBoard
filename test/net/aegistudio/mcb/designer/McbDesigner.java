@@ -37,6 +37,7 @@ import net.aegistudio.mcb.ComponentFactory;
 import net.aegistudio.mcb.Data;
 import net.aegistudio.mcb.board.ActualGrid;
 import net.aegistudio.mcb.board.SpectatedActualGrid;
+import net.aegistudio.mcb.designer.component.ComponentSelector;
 import net.aegistudio.mcb.designer.grid.ActualGridEditor;
 import net.aegistudio.mcb.designer.grid.History;
 import net.aegistudio.mcb.designer.grid.LayoutGridEditor;
@@ -65,7 +66,6 @@ public class McbDesigner extends JFrame implements Informate {
 	public final ComponentFactory factory = new ComponentFactory();
 	public final HashMap<Class<?>, ComponentPlacer> placer = new HashMap<>();
 	private void add(ComponentPlacer placer) {
-		System.out.println(placer);
 		this.placer.put(placer.component.getClass(), placer);
 	}
 	
@@ -81,9 +81,8 @@ public class McbDesigner extends JFrame implements Informate {
 		factory.all(Repeater.class, repeater -> this.add(new ComponentPlacer(Material.DIODE, repeater)));
 		factory.all(Comparator.class, comparator -> this.add(new ComponentPlacer(Material.REDSTONE_COMPARATOR, comparator)));
 		factory.all(CommandBlock.class, command -> this.add(new ComponentPlacer(Material.COMMAND, command)));
-		
 	}
-	public final StubProvider provider = new StubProvider(factory);
+	public final ComponentSelector provider;
 	
 	JMenu file;	JMenuItem newFile, openFile, saveFile;
 	JMenu edit; JMenuItem menuRedo, menuUndo;	JButton toolRedo, toolUndo;
@@ -115,7 +114,10 @@ public class McbDesigner extends JFrame implements Informate {
 				}
 			}
 		});
-		super.add(provider);
+		
+		ComponentSelector itembar = new ComponentSelector(this);
+		this.provider = itembar;
+		super.add(itembar);
 		
 		super.add(toolbar);
 		toolbar.addSeparator();
@@ -217,7 +219,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuShowName.addActionListener(a -> showName());
 		view.add(menuShowName);
 		
-		toolShowName = new JToggleButton("Name");
+		toolShowName = new JToggleButton(new ImageIcon("assets/show_name.png"));
 		toolShowName.addActionListener(a -> showName());
 		toolShowName.setToolTipText("Show name");
 		toolShowName.setPreferredSize(TOOL_BAR_SIZE);
@@ -227,7 +229,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuShowDescription.addActionListener(a -> showDescription());
 		view.add(menuShowDescription);
 
-		toolShowDescription = new JToggleButton("Desc");
+		toolShowDescription = new JToggleButton(new ImageIcon("assets/show_description.png"));
 		toolShowDescription.addActionListener(a -> showDescription());
 		toolShowDescription.setToolTipText("Show description");
 		toolShowDescription.setPreferredSize(TOOL_BAR_SIZE);
@@ -237,7 +239,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuShowStatus.addActionListener(a -> showStatus());
 		view.add(menuShowStatus);
 		
-		toolShowStatus = new JToggleButton("Stat");
+		toolShowStatus = new JToggleButton(new ImageIcon("assets/show_status.png"));
 		toolShowStatus.setToolTipText("Show status");
 		toolShowStatus.addActionListener(a -> showStatus());
 		toolShowStatus.setPreferredSize(TOOL_BAR_SIZE);
@@ -266,7 +268,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuSimulate.addActionListener(a -> beginSimulate());
 		simulate.add(menuSimulate);
 		
-		toolSimulate = new JToggleButton("Simulate");
+		toolSimulate = new JToggleButton(new ImageIcon("assets/simulation.png"));
 		toolSimulate.setToolTipText("Simulate");
 		toolSimulate.addActionListener(a -> beginSimulate());
 		toolSimulate.setPreferredSize(TOOL_BAR_SIZE);
@@ -279,7 +281,7 @@ public class McbDesigner extends JFrame implements Informate {
 		menuContinous.setSelected(true);
 		simulate.add(menuContinous);
 		
-		toolContinous = new JToggleButton("Cont");
+		toolContinous = new JToggleButton(new ImageIcon("assets/continous.png"));
 		toolContinous.setToolTipText("Enable/Disable Continous");
 		toolContinous.addActionListener(a -> continousSwitch());
 		toolContinous.setPreferredSize(TOOL_BAR_SIZE);
@@ -345,7 +347,10 @@ public class McbDesigner extends JFrame implements Informate {
 		if(newComponent instanceof LayoutGridEditor)
 			this.layout = (LayoutGridEditor) newComponent;
 		
-		this.setSize(gridComponent.getWidth(), gridComponent.getHeight() 
+		this.provider.setLocation((gridComponent.getWidth() - this.provider.getWidth()) / 2 , 
+				gridComponent.getHeight() + TOOL_BAR_HEIGHT);
+		
+		this.setSize(gridComponent.getWidth(), gridComponent.getHeight() + provider.getHeight()
 				+ this.getJMenuBar().getPreferredSize().height + TOOL_BAR_HEIGHT);
 		this.repaint();
 	}
@@ -541,7 +546,7 @@ public class McbDesigner extends JFrame implements Informate {
 	public String describe(Cell cell, Component component, Data data) {
 		StringBuilder builder = new StringBuilder();
 		
-		if(showName) {
+		if((cell == null && data == null) || showName) {
 			String name = this.name.describe(cell, component, data);
 			if(name != null) {
 				builder.append("\n\n");
@@ -557,7 +562,7 @@ public class McbDesigner extends JFrame implements Informate {
 			}
 		}
 		
-		if(showStatus) {
+		if((!(cell == null && data == null)) && showStatus) {
 			String status = this.informate.describe(cell, component, data);
 			if(status != null) {
 				builder.append("\n\n");
