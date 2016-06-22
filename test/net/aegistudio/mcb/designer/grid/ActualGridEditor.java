@@ -5,11 +5,11 @@ import java.awt.event.MouseEvent;
 
 import net.aegistudio.mcb.Data;
 import net.aegistudio.mcb.board.ActualGrid;
+import net.aegistudio.mcb.designer.NeoAwtGridComponent;
 import net.aegistudio.mcb.designer.info.Informate;
-import net.aegistudio.mcb.stdaln.AwtGridComponent;
 import net.aegistudio.mpp.Interaction;
 
-public class ActualGridEditor extends AwtGridComponent {
+public class ActualGridEditor extends NeoAwtGridComponent {
 	private static final long serialVersionUID = 1L;
 
 	public ActualGridEditor(Informate informate, ActualGrid grid) {

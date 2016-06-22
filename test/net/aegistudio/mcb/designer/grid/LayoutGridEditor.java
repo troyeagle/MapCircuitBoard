@@ -12,10 +12,10 @@ import org.bukkit.inventory.ItemStack;
 
 import net.aegistudio.mcb.Data;
 import net.aegistudio.mcb.designer.IComponentProvider;
+import net.aegistudio.mcb.designer.NeoAwtGridComponent;
 import net.aegistudio.mcb.designer.info.Informate;
 import net.aegistudio.mcb.layout.ComponentPlacer;
 import net.aegistudio.mcb.layout.LayoutGrid;
-import net.aegistudio.mcb.stdaln.AwtGridComponent;
 import net.aegistudio.mpp.Interaction;
 
 /**
@@ -27,7 +27,7 @@ import net.aegistudio.mpp.Interaction;
  *
  */
 
-public class LayoutGridEditor extends AwtGridComponent {
+public class LayoutGridEditor extends NeoAwtGridComponent {
 	private static final long serialVersionUID = 1L;
 	public final History history = new History();
 	
