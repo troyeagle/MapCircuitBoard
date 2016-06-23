@@ -76,6 +76,7 @@ public class McTooltip extends Control {
 				+ this.style
 				+ "</style></head><body>"
 				+ text.replaceAll("(\r\n|\n)", "<br>")
+					.replaceAll("[ ]", "&nbsp;")
 				+ "</body></html>";
 	}
 	

@@ -7,6 +7,8 @@ import net.aegistudio.mcb.Cell;
 import net.aegistudio.mcb.Component;
 import net.aegistudio.mcb.Data;
 import net.aegistudio.mcb.Facing;
+import net.aegistudio.mcb.layout.LayoutUnitCell;
+import net.aegistudio.mcb.layout.LayoutWireCell;
 import net.aegistudio.mcb.unit.*;
 import net.aegistudio.mcb.wire.*;
 
@@ -25,11 +27,18 @@ public class StatusInformate extends DefaultInformate {
 			textBuilder.append("X=" + cell.getColumn() + ", Y=" + cell.getRow());
 			
 			textBuilder.append("\n");
-			textBuilder.append("Voltage: ");
-			for(Facing facing : Facing.values()) {
-				textBuilder.append(facing.name().charAt(0) + ":");
-				textBuilder.append(cell.getLevel(facing));
-				textBuilder.append(' ');
+			if(cell instanceof LayoutWireCell) {
+				String description = describeLayoutWire((LayoutWireCell) cell);
+				if(description.length() > 0)
+					textBuilder.append("Distance: " + description);
+			}
+			else {
+				textBuilder.append("Voltage: ");
+				for(Facing facing : Facing.values()) {
+					textBuilder.append(facing.name().charAt(0) + ":");
+					textBuilder.append(cell.getLevel(facing));
+					textBuilder.append(' ');
+				}
 			}
 			
 			String desc = super.describe(cell, component, data);
@@ -40,6 +49,23 @@ public class StatusInformate extends DefaultInformate {
 			return new String(textBuilder);
 		}
 		return null;
+	}
+	
+	private String describeLayoutWire(LayoutWireCell cell) {
+		StringBuilder textBuilder = new StringBuilder();
+		LayoutWireCell wire = (LayoutWireCell) cell;
+		for(LayoutUnitCell adjacence : wire.allAdjacentUnit()) {
+			textBuilder.append("\n");
+			textBuilder.append("  (" + adjacence.getColumn() + ", " + adjacence.getRow() + "): ");
+			for(Facing facing : Facing.values()) {
+				short distance = wire.getDistance(adjacence, facing);
+				if(distance == Short.MAX_VALUE) continue;
+				textBuilder.append(facing.name().charAt(0) + "=");
+				textBuilder.append(distance);
+				textBuilder.append(' ');
+			}
+		}
+		return new String(textBuilder);
 	}
 	
 	public static <T> T get(Object obj, Class<T> ftype, String fieldname) {
