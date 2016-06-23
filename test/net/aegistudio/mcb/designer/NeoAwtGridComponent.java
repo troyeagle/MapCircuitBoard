@@ -35,8 +35,8 @@ public class NeoAwtGridComponent extends AwtGridComponent {
 				Point location = this.getLocationOnScreen();
 				popup = PopupFactory.getSharedInstance()
 							.getPopup(this, toolTip, 
-									location.x + currentX, 
-									location.y + currentY);
+									location.x + currentX + 10, 
+									location.y + currentY + 10);
 				popup.show();
 			}
 		}

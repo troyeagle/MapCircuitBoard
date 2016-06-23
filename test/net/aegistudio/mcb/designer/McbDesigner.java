@@ -357,6 +357,7 @@ public class McbDesigner extends JFrame implements Informate {
 		this.provider.setLocation((gridComponent.getWidth() - this.provider.getWidth()) / 2 , 
 				gridComponent.getHeight() + TOOL_BAR_HEIGHT);
 		
+		
 		this.setSize(gridComponent.getWidth(), gridComponent.getHeight() 
 				//+ (provider.isVisible()? provider.getHeight() : 0) 
 				+ provider.getHeight() + (System.getProperty("os.name").equals("windows")? 40 : 0)
@@ -364,6 +365,7 @@ public class McbDesigner extends JFrame implements Informate {
 		
 		this.repaint();
 	}
+	
 	
 	/**
 	 * Command: New
