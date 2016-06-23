@@ -25,8 +25,8 @@ public class RepeaterComponent extends ComponentItem {
 	
 	public static List<RepeaterComponent> getAll() {
 		List<RepeaterComponent> components = new ArrayList<>();
-		for (int i = repeaters.length - 1; i >= 0; i--) {
-			components.add(0, new RepeaterComponent(i));
+		for (int i = 0; i < repeaters.length; i++) {
+			components.add(new RepeaterComponent(i));
 		}
 		return components;
 	}
