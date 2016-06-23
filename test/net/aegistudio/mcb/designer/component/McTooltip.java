@@ -27,6 +27,7 @@ public class McTooltip extends Control {
 		
 		this.addition = new LabelWithShadow(true);
 		this.addition.setTextColor(Color.GRAY);
+		this.addition.setShadowReleativeLocation(1, 1);
 		
 		this.setFontSize(12);
 		
